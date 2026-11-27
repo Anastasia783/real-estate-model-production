@@ -1,0 +1,14 @@
+name: real-estate-model-production
+
+services:
+  ml_service:
+    build:
+      context: .
+      dockerfile: Dockerfile_ml_service
+    image: real-estate-ml-service:compose
+    container_name: ml_service
+    env_file:
+      - services/.env
+    ports:
+      - "127.0.0.1:${ML_SERVICE_HOST_PORT:-8000}:8000"
+    restart: unless-stopped

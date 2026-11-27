@@ -47,7 +47,6 @@ python -m uvicorn services.ml_service.main:app --host 127.0.0.1 --port 8000
 
 
 В Windows:
-
 .\.venv\Scripts\python.exe -m uvicorn services.ml_service.main:app --host 127.0.0.1 --port 8000
 
 Модель загружается один раз при старте приложения.
@@ -59,8 +58,6 @@ Swagger UI: http://127.0.0.1:8000/docs
 ### Проверка состояния
 
 Запросы выполняются во втором терминале, пока сервер работает.
-
-Windows PowerShell:
 
 curl.exe http://127.0.0.1:8000/health
 
@@ -139,9 +136,34 @@ curl.exe -i -X POST "http://127.0.0.1:8001/predict" -H "Content-Type: applicatio
 docker stop real-estate-ml-service
 docker rm real-estate-ml-service
 
-## Этап 3. Запуск сервисов для системы мониторинга
+## Этап 3. Запуск через Docker Compose
 
-Инструкция будет добавлена после проверки Docker Compose.
+### Требования
+Команда `docker` доступна в терминале
+Настройки находятся в `services/.env`
+
+### Запуск
+docker compose --env-file services/.env up -d --build
+
+
+### Проверка
+docker compose --env-file services/.env ps
+curl.exe -i "http://127.0.0.1:8000/health"
+curl.exe -i -X POST "http://127.0.0.1:8000/predict" -H "Content-Type: application/json" --data-binary "@examples/predict_request.json"
+
+
+Ожидаем: 
+ml_service имеет статус `healthy`
+/health возвращает HTTP 200 и `{"status":"ok"}`
+/predict возвращает HTTP 200, user_id равен test_user`, а prediction примерно 18709403.43.
+
+### Логи
+docker compose --env-file services/.env logs --tail 50 ml_service
+
+
+### Остановка
+docker compose --env-file services/.env down
+
 
 ## Этап 4. Построение дашборда для мониторинга
 
