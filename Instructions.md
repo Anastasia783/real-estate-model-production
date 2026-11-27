@@ -106,9 +106,38 @@ curl.exe -X POST "http://127.0.0.1:8000/predict" -H "Content-Type: application/j
 
 Для стандартного локального запуска переменные окружения и файл .env не требуются.
 
-## Этап 2. Контейнеризация микросервиса
+## Этап 2. Запуск в Docker
 
-Инструкция будет добавлена после проверки Docker-запуска.
+### Требования
+
+Команда `docker version` показывает `Client` и `Server`
+
+
+### Сборка 
+docker build -f Dockerfile_ml_service -t real-estate-ml-service:local 
+
+
+### Запуск контейнера
+
+docker run -d --name real-estate-ml-service -p 127.0.0.1:8001:8000 real-estate-ml-service:local
+
+Сервис доступен на `http://127.0.0.1:8001`, он слушает порт 8000.
+
+### Проверка
+docker ps
+docker logs --tail 50 real-estate-ml-service
+curl.exe -i "http://127.0.0.1:8001/health"
+curl.exe -i -X POST "http://127.0.0.1:8001/predict" -H "Content-Type: application/json" --data-binary "@examples/predict_request.json"
+
+По итогам проверки ожидаем:
+статус контейнера `Up ... (healthy)`
+/health возвращает HTTP 200 и `{"status":"ok"}`;
+/predict возвращает HTTP 200, user_id равный `test_user`, а `prediction` около 18709403.43
+
+### Остановка 
+
+docker stop real-estate-ml-service
+docker rm real-estate-ml-service
 
 ## Этап 3. Запуск сервисов для системы мониторинга
 
