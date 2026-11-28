@@ -110,6 +110,7 @@ docker run -d --name real-estate-ml-service -p 127.0.0.1:8001:8000 real-estate-m
 
 ### Проверка
 docker ps
+
 docker logs --tail 50 real-estate-ml-service
 
 curl.exe -i "http://127.0.0.1:8001/health"
@@ -137,6 +138,7 @@ docker compose --env-file services/.env up -d --build
 
 ### Проверка
 docker compose --env-file services/.env ps
+
 curl.exe -i "http://127.0.0.1:8000/health"
 
 curl.exe -i -X POST "http://127.0.0.1:8000/predict" -H "Content-Type: application/json" --data-binary "@examples/predict_request.json"
@@ -154,57 +156,66 @@ docker compose --env-file services/.env logs --tail 50 ml_service
 docker compose --env-file services/.env down
 
 
-## Этап 4. Построение дашборда для мониторинга:Prometheus и Grafana
+## Этап 4. Мониторинг: Prometheus и Grafana
 
-### В составе:
-services/prometheus/prometheus.yml — конфиг Prometheus (каждые 15 с)
-services/grafana/provisioning/datasources/prometheus.yml — datasource Prometheus (`uid: prometheus`, `url: http://prometheus:9090`).
-services/grafana/provisioning/dashboards/dashboards.yml — провайдер дашбордов (путь: /etc/grafana/dashboards)
-services/grafana/dashboards/real-estate-ml-service.json — дашборд Real Estate ML Service
+Состав:
+
+`services/prometheus/prometheus.yml` - конфиг Prometheus (опрос каждые 15 с)
+`services/grafana/provisioning/datasources/prometheus.yml` - datasource Prometheus (uid `prometheus`, url `http://prometheus:9090`)
+`services/grafana/provisioning/dashboards/dashboards.yml` - провайдер дашбордов (путь `/etc/grafana/dashboards`)
+`services/grafana/dashboards/real-estate-ml-service.json` - дашборд Real Estate ML Service
+`services/dashboard.json` и `services/dashboard.jpg` - копия дашборда и скриншот
+`scripts/load_test.py` - скрипт генерации нагрузки
+`Monitoring.md` - описание метрик и панелей
 
 ### Запуск
-docker compose up -d
 
-Grafana: http://127.0.0.1:3000 (логин и пароль:  admin/admin)
-Дашборд: http://127.0.0.1:3000/d/real-estate-ml-service
+docker compose --env-file services/.env up -d --build
+
+
+- Grafana: http://127.0.0.1:3000 (admin / admin)
+- Дашборд: http://127.0.0.1:3000/d/real-estate-ml-service
+- Prometheus: http://127.0.0.1:9090
 
 ### Проверка
+
 curl.exe -s "http://127.0.0.1:9090/api/v1/targets"
-
 curl.exe -s -u admin:admin "http://127.0.0.1:3000/api/datasources"
-
 curl.exe -s -u admin:admin "http://127.0.0.1:3000/api/search?query=Real"
 
-Ожидаем:ml_service:8000 - `up`.
+
+Ожидаем: цель `ml_service:8000` в состоянии `up`, datasource `prometheus`, дашборд `Real Estate ML Service`.
 
 ### Нагрузка
-1..30 | ForEach-Object { curl.exe -s -X POST "http://127.0.0.1:8000/predict" -H "Content-Type: application/json" --data-binary "@examples/predict_request.json" | Out-Null; Start-Sleep -Milliseconds 300 }
+
+python scripts/load_test.py --requests 600 --delay 0.2
+
+
+Скрипт отправляет корректные запросы и часть некорректных, поэтому на дашборде появляются ответы `200` и `422`.
 
 ### Что показывает дашборд
-1.Запросы в секунду
-2.Задержка p95, с
-3.Средний прогноз в руб.
-4.Средняя площадь в квадратных метрах
-5.Ошибки модели за час
 
-После нагрузки на графиках появляются данные, Ошибки модели за час должны быть равны 0
+1. Запросы в секунду
+2. Задержка p95, с
+3. Средний прогноз в руб.
+4. Средняя площадь в квадратных метрах
+5. Ошибки модели за час
+6. Запросы по статусам HTTP
+
+После нагрузки на графиках появляются данные, «Ошибки модели за час» равны 0, на bar chart видны столбцы `200` и `422`. Подробности - в `Monitoring.md`.
 
 ### Остановка
-docker compose stop grafana
-docker compose down
+
+docker compose --env-file services/.env down
 
 
 ### Пересоздание Grafana
 Если datasource или дашборд не обновились после правки файлов:
-
-docker compose stop grafana
-docker compose rm -f grafana
-docker volume rm real-estate-model-production_grafana_data
-docker compose up -d grafana
+docker compose stop grafana docker compose rm -f grafana docker volume rm real-estate-model-production_grafana_data docker compose up -d grafana
 
 Данные Grafana (пароли, ручные правки) будут удалены.
 
 ### Проблематика
-Может быть ошибка Datasource not found — это значит, что  открыта старая вкладка со старым uid. Нужно открыть страницу  в инкогнито.
-Если панели пустые — отправь запросы на `/predict` и подожди 15–30 с.
+Может быть ошибка Datasource not found — это значит, что открыта старая вкладка со старым uid. Нужно открыть страницу в инкогнито. Если панели пустые — нужно сделать запрос на /predict и подожди 15–30 с.
+
 
