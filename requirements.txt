@@ -6,3 +6,4 @@ cloudpickle==3.1.2
 fastapi==0.165.0
 pydantic==2.14.4
 uvicorn==0.54.0
+prometheus-client==0.26.0

@@ -1,0 +1,58 @@
+{
+  "uid": "real-estate-ml-service",
+  "title": "Real Estate ML Service",
+  "tags": ["ml", "real-estate"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "Запросы в секунду",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "editorMode": "code", "range": true, "legendFormat": "{{path}}",
+          "expr": "sum by (path) (rate(http_requests_total{path!=\"/health\"}[1m]))" }
+      ]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Задержка p95, с",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "editorMode": "code", "range": true, "legendFormat": "p95 /predict",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{path=\"/predict\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Средний прогноз в руб.",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "editorMode": "code", "range": true, "legendFormat": "прогноз",
+          "expr": "rate(model_prediction_value_rub_sum[5m]) / rate(model_prediction_value_rub_count[5m])" }
+      ]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Средняя площадь в квадратных метрах",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "editorMode": "code", "range": true, "legendFormat": "площадь",
+          "expr": "rate(model_input_total_area_m2_sum[5m]) / rate(model_input_total_area_m2_count[5m])" }
+      ]
+    },
+    {
+      "id": 5, "type": "stat", "title": "Ошибки модели за час",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "editorMode": "code", "instant": true,
+          "expr": "sum(increase(model_prediction_errors_total[1h])) or vector(0)" }
+      ]
+    }
+  ]
+}

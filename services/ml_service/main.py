@@ -2,12 +2,22 @@
 
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .handler import ModelHandler
+from .metrics import (
+    HTTP_REQUEST_DURATION_SECONDS,
+    HTTP_REQUESTS_IN_PROGRESS,
+    HTTP_REQUESTS_TOTAL,
+    INPUT_TOTAL_AREA_M2,
+    PREDICTION_ERRORS_TOTAL,
+    PREDICTION_VALUE_RUB,
+)
 from .schemas import PredictionRequest, PredictionResponse
 
 
@@ -49,9 +59,38 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    method = request.method
+    status = "500"
+    started = time.perf_counter()
+    HTTP_REQUESTS_IN_PROGRESS.inc()
+
+    try:
+        response = await call_next(request)
+        status = str(response.status_code)
+        return response
+    finally:
+        duration = time.perf_counter() - started
+        route = request.scope.get("route")
+        path = getattr(route, "path", "unmatched")
+
+        HTTP_REQUESTS_IN_PROGRESS.dec()
+        HTTP_REQUESTS_TOTAL.labels(method, path, status).inc()
+        HTTP_REQUEST_DURATION_SECONDS.labels(method, path).observe(duration)
+
+
 @app.get("/health", tags=["Service"])
 def health():
     return {"status": "ok"}
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.post(
@@ -64,10 +103,15 @@ def predict(
     request: Request,
 ) -> PredictionResponse:
     try:
-        return request.app.state.handler.predict(payload)
+        result = request.app.state.handler.predict(payload)
     except Exception:
+        PREDICTION_ERRORS_TOTAL.inc()
         logger.exception("Prediction failed")
         raise HTTPException(
             status_code=500,
             detail="Prediction failed due to an internal service error",
         ) from None
+
+    INPUT_TOTAL_AREA_M2.observe(payload.features.total_area)
+    PREDICTION_VALUE_RUB.observe(result.prediction)
+    return result
