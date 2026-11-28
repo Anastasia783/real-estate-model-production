@@ -161,11 +161,17 @@ docker compose --env-file services/.env down
 Состав:
 
 `services/prometheus/prometheus.yml` - конфиг Prometheus (опрос каждые 15 с)
+
 `services/grafana/provisioning/datasources/prometheus.yml` - datasource Prometheus (uid `prometheus`, url `http://prometheus:9090`)
+
 `services/grafana/provisioning/dashboards/dashboards.yml` - провайдер дашбордов (путь `/etc/grafana/dashboards`)
+
 `services/grafana/dashboards/real-estate-ml-service.json` - дашборд Real Estate ML Service
+
 `services/dashboard.json` и `services/dashboard.jpg` - копия дашборда и скриншот
+
 `scripts/load_test.py` - скрипт генерации нагрузки
+
 `Monitoring.md` - описание метрик и панелей
 
 ### Запуск
