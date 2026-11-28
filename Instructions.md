@@ -112,6 +112,7 @@ docker run -d --name real-estate-ml-service -p 127.0.0.1:8001:8000 real-estate-m
 docker ps
 docker logs --tail 50 real-estate-ml-service
 curl.exe -i "http://127.0.0.1:8001/health"
+
 curl.exe -i -X POST "http://127.0.0.1:8001/predict" -H "Content-Type: application/json" --data-binary "@examples/predict_request.json"
 
 По итогам проверки ожидаем:
@@ -136,6 +137,7 @@ docker compose --env-file services/.env up -d --build
 ### Проверка
 docker compose --env-file services/.env ps
 curl.exe -i "http://127.0.0.1:8000/health"
+
 curl.exe -i -X POST "http://127.0.0.1:8000/predict" -H "Content-Type: application/json" --data-binary "@examples/predict_request.json"
 
 Ожидаем: 
