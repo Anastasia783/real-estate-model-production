@@ -170,7 +170,9 @@ Grafana: http://127.0.0.1:3000 (логин и пароль:  admin/admin)
 
 ### Проверка
 curl.exe -s "http://127.0.0.1:9090/api/v1/targets"
+
 curl.exe -s -u admin:admin "http://127.0.0.1:3000/api/datasources"
+
 curl.exe -s -u admin:admin "http://127.0.0.1:3000/api/search?query=Real"
 
 Ожидаем:ml_service:8000 - `up`.
